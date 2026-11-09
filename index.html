@@ -1,0 +1,1810 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SNU CS Study Cafe - 서울대 고양이 공부방</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Three.js (3D Graphics) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        wood: {
+                            50: '#FDFBF7',
+                            100: '#F7F1E5',
+                            200: '#EADBC8',
+                            300: '#DAC0A3',
+                            400: '#C8A17D',
+                            500: '#A07855',
+                            600: '#865D36',
+                            700: '#634423',
+                            800: '#483019',
+                            900: '#2C1C0D'
+                        },
+                    },
+                    fontFamily: {
+                        gowun: ['"Gowun Batang"', 'serif'],
+                        sans: ['"Noto Sans KR"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #2C1C0D;
+            color: #483019;
+            user-select: none;
+        }
+
+        .wood-bg {
+            background-color: #865D36;
+            background-image: radial-gradient(#A07855 15%, transparent 16%), radial-gradient(#634423 15%, transparent 16%);
+            background-size: 60px 60px;
+            background-position: 0 0, 30px 30px;
+        }
+
+        .lamp-glow {
+            box-shadow: 0 0 50px 20px rgba(255, 220, 130, 0.45);
+        }
+
+        @keyframes purr {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-3px) rotate(1deg); }
+        }
+        .cat-animated {
+            animation: purr 2.5s ease-in-out infinite;
+        }
+
+        .glass-panel {
+            background: rgba(253, 251, 247, 0.96);
+            backdrop-filter: blur(8px);
+            border: 2px solid #DAC0A3;
+        }
+
+        #churu-canvas-container {
+            cursor: grab;
+            touch-action: none;
+        }
+        #churu-canvas-container:active {
+            cursor: grabbing;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F7F1E5;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #C8A17D;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden bg-wood-900 text-wood-800">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-wood-800 border-b-4 border-wood-600 px-6 py-3 flex justify-between items-center z-20 shadow-md">
+        <div class="flex items-center gap-3">
+            <div class="bg-wood-600 text-wood-100 p-2.5 rounded-xl border border-wood-400 shadow-inner">
+                <i class="fa-solid font-bold fa-cat text-xl text-amber-300"></i>
+            </div>
+            <div>
+                <h1 class="font-gowun text-xl font-bold text-wood-100 flex items-center gap-2">
+                    SNU 고양이 학술 카페 <span class="text-xs px-2.5 py-0.5 rounded-full bg-amber-600 text-amber-100 border border-amber-400 font-bold">REAL 3D 츄르 v3.5</span>
+                </h1>
+                <p class="text-xs text-wood-300">현실적이고 귀여운 3D 고양이에게 츄르를 주고 보상을 받으세요 🐾</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <!-- Total Churu Count Badge -->
+            <div class="bg-amber-900/90 text-amber-100 px-3.5 py-1.5 rounded-xl border border-amber-500 flex items-center gap-2.5 shadow-md">
+                <span class="text-2xl animate-bounce">🐟</span>
+                <div class="text-xs">
+                    <span class="text-[10px] block text-amber-300 font-medium">획득한 츄르 보상</span>
+                    <span id="churu-count-display" class="font-extrabold text-amber-200 text-sm">0 개</span>
+                </div>
+            </div>
+
+            <!-- Active Avatar Badge -->
+            <div id="user-badge" class="hidden md:flex items-center gap-2.5 bg-wood-700/90 text-wood-100 px-3.5 py-1.5 rounded-xl border border-wood-500 shadow">
+                <span id="user-avatar-display" class="text-2xl">👩‍🎓</span>
+                <div>
+                    <div id="user-name-display" class="text-xs font-bold text-amber-200">학생 미설정</div>
+                    <div id="user-seat-display" class="text-[10px] text-wood-300">자리 선택 필요</div>
+                </div>
+            </div>
+
+            <button onclick="openStatsModal()" class="bg-amber-800 hover:bg-amber-700 text-amber-100 font-bold px-3 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow border border-amber-600 active:scale-95">
+                <i class="fa-solid fa-chart-simple text-amber-300"></i> <span class="hidden sm:inline">공부 리포트</span>
+            </button>
+
+            <button onclick="openCatCollectionModal()" class="bg-amber-800 hover:bg-amber-700 text-amber-100 font-bold px-3 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow border border-amber-600 active:scale-95">
+                <i class="fa-solid fa-heart text-pink-400"></i> <span class="hidden sm:inline">냥이 도감</span>
+            </button>
+
+            <button id="open-peter-desk" onclick="openPeterDesk()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow-lg active:scale-95">
+                <i class="fa-solid fa-graduation-cap text-sm"></i> 조교 피터 상담소
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Layout -->
+    <div class="flex-1 flex overflow-hidden relative">
+
+        <!-- LEFT: Extended Cafe Map & Diverse Booth Seats View -->
+        <main class="flex-1 relative bg-wood-700 overflow-y-auto p-4 md:p-6 wood-bg flex flex-col items-center justify-start">
+            
+            <!-- Cafe Atmosphere Top Lamps -->
+            <div class="w-full max-w-6xl flex justify-between items-start mb-2 px-8 pointer-events-none z-10">
+                <div class="flex gap-16">
+                    <div class="flex flex-col items-center -mt-6">
+                        <div class="w-1 h-12 bg-wood-900"></div>
+                        <div class="w-16 h-8 bg-amber-200 rounded-t-full border-2 border-wood-900 shadow-lg relative flex justify-center">
+                            <div class="w-8 h-8 rounded-full bg-amber-300 opacity-80 blur-xs absolute -bottom-3 lamp-glow"></div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-center -mt-6">
+                        <div class="w-0.5 h-16 bg-wood-900"></div>
+                        <div class="text-xl text-green-700 bg-wood-800 p-1 rounded-b-xl border border-wood-900">🌿</div>
+                    </div>
+                </div>
+
+                <div class="bg-wood-800/95 text-amber-100 border border-wood-500 px-4 py-1.5 rounded-full text-xs font-gowun shadow-md flex items-center gap-2">
+                    <i class="fa-solid fa-circle text-emerald-400 text-[8px] animate-pulse"></i>
+                    <span>원목 부스에서 열공하고 타이머 종료 시 3D 고양이 츄르 보상을 획득하세요!</span>
+                </div>
+
+                <div class="flex gap-16">
+                    <div class="flex flex-col items-center -mt-6">
+                        <div class="w-1 h-12 bg-wood-900"></div>
+                        <div class="w-16 h-8 bg-amber-200 rounded-t-full border-2 border-wood-900 shadow-lg relative flex justify-center">
+                            <div class="w-8 h-8 rounded-full bg-amber-300 opacity-80 blur-xs absolute -bottom-3 lamp-glow"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Virtual Extended Room Layout -->
+            <div class="w-full max-w-6xl bg-wood-100 border-8 border-wood-800 rounded-2xl p-6 shadow-2xl relative flex flex-col gap-6"
+                 style="background-image: repeating-linear-gradient(90deg, #EADBC8, #EADBC8 40px, #DAC0A3 40px, #DAC0A3 42px);">
+
+                <!-- ZONE 1: TOP ROW - 1인 집중 독서실형 & 캣타워석 & 다락방 부스 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 relative z-10">
+                    <div id="seat-1" onclick="selectSeat(1, '1인 몰입형 부스')" 
+                         class="seat-card cursor-pointer bg-wood-200 hover:bg-wood-300 border-4 border-wood-500 rounded-xl p-3 transition-all transform hover:-translate-y-1 shadow-md relative flex flex-col justify-between h-40">
+                        <div class="flex justify-between items-center border-b border-wood-400 pb-1.5">
+                            <span class="font-bold text-[11px] bg-wood-700 text-wood-100 px-2 py-0.5 rounded">#01 1인 카렐석</span>
+                            <span class="status-badge text-[10px] bg-emerald-100 text-emerald-800 font-medium px-2 py-0.5 rounded-full border border-emerald-300">비어있음</span>
+                        </div>
+                        <div class="my-auto flex items-center justify-center gap-2">
+                            <div class="avatar-holder text-3xl text-wood-400 opacity-60">🪑</div>
+                            <div class="desk-details text-center">
+                                <div class="text-xs text-wood-800 font-bold font-gowun">벽면 밀착 몰입석</div>
+                                <div class="text-[10px] text-wood-600">집중력 100% 보장</div>
+                            </div>
+                        </div>
+                        <div onclick="interactCat(event, '나비', '골골송을 부르며 옆에서 졸고 있습니다... 🐾')" 
+                             class="cat-animated absolute bottom-2 right-2 cursor-pointer text-xl hover:scale-125 transition-transform" title="나비">🐱</div>
+                    </div>
+
+                    <div id="seat-2" onclick="selectSeat(2, '중앙 우드 파티션석')" 
+                         class="seat-card cursor-pointer bg-wood-200 hover:bg-wood-300 border-4 border-wood-600 rounded-xl p-3 transition-all transform hover:-translate-y-1 shadow-md relative flex flex-col justify-between h-40">
+                        <div class="flex justify-between items-center border-b border-wood-400 pb-1.5">
+                            <span class="font-bold text-[11px] bg-wood-800 text-amber-200 px-2 py-0.5 rounded">#02 대표 파티션석</span>
+                            <span class="status-badge text-[10px] bg-emerald-100 text-emerald-800 font-medium px-2 py-0.5 rounded-full border border-emerald-300">비어있음</span>
+                        </div>
+                        <div class="my-auto flex items-center justify-center gap-2">
+                            <div class="avatar-holder text-3xl text-wood-400 opacity-60">🪑</div>
+                            <div class="desk-details text-center">
+                                <div class="text-xs text-wood-800 font-bold font-gowun">원목 프레임 파티션</div>
+                                <div class="text-[10px] text-wood-600">사진 속 대표 명당!</div>
+                            </div>
+                        </div>
+                        <div onclick="interactCat(event, '치즈', '파티션 나무 기둥을 거닐고 있습니다! 🧀')" 
+                             class="cat-animated absolute -top-3 right-4 cursor-pointer text-2xl hover:scale-125 transition-transform drop-shadow" title="치즈">🐈</div>
+                    </div>
+
+                    <div id="seat-3" onclick="selectSeat(3, '복층 다락방 캣타워석')" 
+                         class="seat-card cursor-pointer bg-wood-200 hover:bg-wood-300 border-4 border-wood-500 rounded-xl p-3 transition-all transform hover:-translate-y-1 shadow-md relative flex flex-col justify-between h-40">
+                        <div class="flex justify-between items-center border-b border-wood-400 pb-1.5">
+                            <span class="font-bold text-[11px] bg-wood-700 text-wood-100 px-2 py-0.5 rounded">#03 복층 다락 캣타워</span>
+                            <span class="status-badge text-[10px] bg-emerald-100 text-emerald-800 font-medium px-2 py-0.5 rounded-full border border-emerald-300">비어있음</span>
+                        </div>
+                        <div class="my-auto flex items-center justify-center gap-2">
+                            <div class="avatar-holder text-3xl text-wood-400 opacity-60">🪜</div>
+                            <div class="desk-details text-center">
+                                <div class="text-xs text-wood-800 font-bold font-gowun">사다리 조망석</div>
+                                <div class="text-[10px] text-wood-600">고양이들과 눈높이 상시 맞춤</div>
+                            </div>
+                        </div>
+                        <div onclick="interactCat(event, '까망이', '다락방 높이서 나를 내려다보고 있다냥 🖤')" 
+                             class="cat-animated absolute bottom-2 left-2 cursor-pointer text-xl hover:scale-125 transition-transform" title="까망이">🐈‍⬛</div>
+                    </div>
+
+                    <div id="seat-4" onclick="selectSeat(4, '창가 햇살 소파석')" 
+                         class="seat-card cursor-pointer bg-wood-200 hover:bg-wood-300 border-4 border-wood-500 rounded-xl p-3 transition-all transform hover:-translate-y-1 shadow-md relative flex flex-col justify-between h-40">
+                        <div class="flex justify-between items-center border-b border-wood-400 pb-1.5">
+                            <span class="font-bold text-[11px] bg-wood-700 text-wood-100 px-2 py-0.5 rounded">#04 창가 햇살석</span>
+                            <span class="status-badge text-[10px] bg-emerald-100 text-emerald-800 font-medium px-2 py-0.5 rounded-full border border-emerald-300">비어있음</span>
+                        </div>
+                        <div class="my-auto flex items-center justify-center gap-2">
+                            <div class="avatar-holder text-3xl text-wood-400 opacity-60">🛋️</div>
+                            <div class="desk-details text-center">
+                                <div class="text-xs text-wood-800 font-bold font-gowun">따스한 햇볕 소파</div>
+                                <div class="text-[10px] text-wood-600">힐링 공부 최적화</div>
+                            </div>
+                        </div>
+                        <div onclick="interactCat(event, '삼색이', '햇살 받으며 식빵을 굽는 중이다냥 🍞')" 
+                             class="cat-animated absolute bottom-2 right-2 cursor-pointer text-xl hover:scale-125 transition-transform" title="삼색이">🐈</div>
+                    </div>
+                </div>
+
+                <!-- CENTER INTERACTIVE ZONE: Cat Lounge -->
+                <div class="bg-wood-300/60 border-2 border-dashed border-wood-500 rounded-xl p-4 relative flex items-center justify-around min-h-[110px]">
+                    <div class="text-center">
+                        <span class="text-3xl">🪴</span>
+                        <div class="text-[10px] text-wood-800 font-bold mt-1">공기정화 몬스테라</div>
+                    </div>
+
+                    <div onclick="interactCat(event, '하양이', '크아앙~ 귀여운 기지개를 켜며 자리를 비켜줍니다 🤍')" 
+                         class="cursor-pointer bg-amber-100/90 px-4 py-2 rounded-full border border-amber-400 shadow flex items-center gap-2 hover:bg-amber-200 transition transform hover:scale-105">
+                        <span class="text-2xl cat-animated">🐇</span>
+                        <div class="text-left">
+                            <div class="text-xs font-bold text-wood-900">하양이 <span class="text-[9px] font-normal text-amber-800">캣닢 감상 중</span></div>
+                            <div class="text-[10px] text-wood-700">"오늘 뽀모도로 세션도 화이팅!"</div>
+                        </div>
+                    </div>
+
+                    <div class="text-center hidden sm:block">
+                        <span class="text-3xl">☕</span>
+                        <div class="text-[10px] text-wood-800 font-bold mt-1">드립커피 셀프바</div>
+                    </div>
+                </div>
+
+                <!-- ZONE 2: BOTTOM ROW -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 relative z-10">
+                    <div id="seat-5" onclick="selectSeat(5, '2인 친구 협동석')" 
+                         class="seat-card cursor-pointer bg-wood-200 hover:bg-wood-300 border-4 border-wood-500 rounded-xl p-3 transition-all transform hover:-translate-y-1 shadow-md relative flex flex-col justify-between h-40">
+                        <div class="flex justify-between items-center border-b border-wood-400 pb-1.5">
+                            <span class="font-bold text-[11px] bg-wood-700 text-wood-100 px-2 py-0.5 rounded">#05 2인 협동석</span>
+                            <span class="status-badge text-[10px] bg-emerald-100 text-emerald-800 font-medium px-2 py-0.5 rounded-full border border-emerald-300">비어있음</span>
+                        </div>
+                        <div class="my-auto flex items-center justify-center gap-2">
+                            <div class="avatar-holder text-3xl text-wood-400 opacity-60">👥</div>
+                            <div class="desk-details text-center">
+                                <div class="text-xs text-wood-800 font-bold font-gowun">마주보는 대형 테이블</div>
+                                <div class="text-[10px] text-wood-600">코딩 페어 프로그래밍 추천</div>
+                            </div>
+                        </div>
+                        <div onclick="interactCat(event, '점박이', '노트북 키보드 위에 눕고 싶어 눈독 들이고 있습니다! 🐾')" 
+                             class="cat-animated absolute bottom-2 right-2 cursor-pointer text-xl hover:scale-125 transition-transform" title="점박이">🐆</div>
+                    </div>
+
+                    <div id="seat-6" onclick="selectSeat(6, '독립 캐빈 개인석')" 
+                         class="seat-card cursor-pointer bg-wood-200 hover:bg-wood-300 border-4 border-wood-500 rounded-xl p-3 transition-all transform hover:-translate-y-1 shadow-md relative flex flex-col justify-between h-40">
+                        <div class="flex justify-between items-center border-b border-wood-400 pb-1.5">
+                            <span class="font-bold text-[11px] bg-wood-700 text-wood-100 px-2 py-0.5 rounded">#06 오두막 캐빈석</span>
+                            <span class="status-badge text-[10px] bg-emerald-100 text-emerald-800 font-medium px-2 py-0.5 rounded-full border border-emerald-300">비어있음</span>
+                        </div>
+                        <div class="my-auto flex items-center justify-center gap-2">
+                            <div class="avatar-holder text-3xl text-wood-400 opacity-60">🛖</div>
+                            <div class="desk-details text-center">
+                                <div class="text-xs text-wood-800 font-bold font-gowun">완전 방음 오두막</div>
+                                <div class="text-[10px] text-wood-600">초고도 집중 연구용</div>
+                            </div>
+                        </div>
+                        <div onclick="interactCat(event, '치즈 주니어', '새우 튀김 쿠션을 꼭 껴안고 자고 있습니다 🍤')" 
+                             class="cat-animated absolute bottom-2 left-2 cursor-pointer text-xl hover:scale-125 transition-transform" title="치즈 주니어">🐱</div>
+                    </div>
+
+                    <div id="seat-7" onclick="selectSeat(7, '라운지 소파 캣라운지석')" 
+                         class="seat-card cursor-pointer bg-wood-200 hover:bg-wood-300 border-4 border-wood-500 rounded-xl p-3 transition-all transform hover:-translate-y-1 shadow-md relative flex flex-col justify-between h-40">
+                        <div class="flex justify-between items-center border-b border-wood-400 pb-1.5">
+                            <span class="font-bold text-[11px] bg-wood-700 text-wood-100 px-2 py-0.5 rounded">#07 라운지 소파석</span>
+                            <span class="status-badge text-[10px] bg-emerald-100 text-emerald-800 font-medium px-2 py-0.5 rounded-full border border-emerald-300">비어있음</span>
+                        </div>
+                        <div class="my-auto flex items-center justify-center gap-2">
+                            <div class="avatar-holder text-3xl text-wood-400 opacity-60">🛋️</div>
+                            <div class="desk-details text-center">
+                                <div class="text-xs text-wood-800 font-bold font-gowun">편안한 푹신 소파</div>
+                                <div class="text-[10px] text-wood-600">논문 읽기 편한 자리</div>
+                            </div>
+                        </div>
+                        <div onclick="interactCat(event, '망고', '스탠드 조명 빛을 쬐며 기지개를 켭니다 🥭')" 
+                             class="cat-animated absolute bottom-2 right-2 cursor-pointer text-xl hover:scale-125 transition-transform" title="망고">🐈</div>
+                    </div>
+
+                    <div id="seat-8" onclick="selectSeat(8, '원목 테라스 조망석')" 
+                         class="seat-card cursor-pointer bg-wood-200 hover:bg-wood-300 border-4 border-wood-500 rounded-xl p-3 transition-all transform hover:-translate-y-1 shadow-md relative flex flex-col justify-between h-40">
+                        <div class="flex justify-between items-center border-b border-wood-400 pb-1.5">
+                            <span class="font-bold text-[11px] bg-wood-700 text-wood-100 px-2 py-0.5 rounded">#08 테라스 원목석</span>
+                            <span class="status-badge text-[10px] bg-emerald-100 text-emerald-800 font-medium px-2 py-0.5 rounded-full border border-emerald-300">비어있음</span>
+                        </div>
+                        <div class="my-auto flex items-center justify-center gap-2">
+                            <div class="avatar-holder text-3xl text-wood-400 opacity-60">🪟</div>
+                            <div class="desk-details text-center">
+                                <div class="text-xs text-wood-800 font-bold font-gowun">야외 풍경 조망석</div>
+                                <div class="text-[10px] text-wood-600">바람 소리가 솔솔</div>
+                            </div>
+                        </div>
+                        <div onclick="interactCat(event, '라떼', '꼬리를 꼬물거리며 밖을 쳐다봅니다 ☕')" 
+                             class="cat-animated absolute bottom-2 left-2 cursor-pointer text-xl hover:scale-125 transition-transform" title="라떼">🐱</div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- RIGHT SIDEBAR: Controls & Tools -->
+        <aside class="w-full md:w-96 bg-wood-100 border-l-4 border-wood-600 flex flex-col z-10 shadow-xl overflow-y-auto">
+            
+            <div class="bg-wood-200 border-b border-wood-300 flex">
+                <button id="tab-btn-timer" onclick="switchTab('timer')" class="flex-1 py-3 font-bold text-xs border-b-2 border-wood-700 text-wood-800 flex items-center justify-center gap-1.5 bg-wood-100">
+                    <i class="fa-solid fa-stopwatch text-amber-700"></i> 타이머 & 소음
+                </button>
+                <button id="tab-btn-todo" onclick="switchTab('todo')" class="flex-1 py-3 font-bold text-xs border-b-2 border-transparent text-wood-600 hover:text-wood-800 flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-list-check text-amber-700"></i> 공부 목표 (To-Do)
+                </button>
+            </div>
+
+            <!-- TAB 1: Pomodoro Timer -->
+            <div id="tab-content-timer" class="p-5 flex-1 flex flex-col gap-5">
+                <div class="bg-wood-50 border-2 border-wood-300 rounded-2xl p-5 text-center shadow-inner relative">
+                    <div class="text-xs font-bold text-wood-600 tracking-wider uppercase mb-1">Pomodoro Study Timer</div>
+                    <div id="timer-mode-label" class="text-xs font-medium text-amber-800 bg-amber-100 inline-block px-3 py-0.5 rounded-full mb-3 border border-amber-300">
+                        집중 공부 시간 🧠
+                    </div>
+
+                    <div id="timer-display" class="font-mono text-5xl font-extrabold text-wood-800 my-2 tracking-tight">
+                        25:00
+                    </div>
+
+                    <div class="w-full bg-wood-200 h-2.5 rounded-full overflow-hidden my-4 border border-wood-300">
+                        <div id="timer-progress" class="bg-amber-600 h-full w-0 transition-all duration-300"></div>
+                    </div>
+
+                    <div class="flex justify-center gap-2">
+                        <button id="btn-timer-start" onclick="toggleTimer()" class="bg-wood-700 hover:bg-wood-800 text-amber-100 font-bold px-5 py-2.5 rounded-xl text-sm transition flex items-center gap-2 shadow-md active:scale-95">
+                            <i class="fa-solid fa-play"></i> <span id="timer-start-text">공부 시작</span>
+                        </button>
+                        <button onclick="resetTimer()" class="bg-wood-300 hover:bg-wood-400 text-wood-800 font-bold px-3 py-2.5 rounded-xl text-sm transition shadow-xs active:scale-95">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex justify-center gap-1.5 mt-4">
+                        <button onclick="setTimerPreset(25)" class="px-2.5 py-1 text-xs bg-wood-200 hover:bg-wood-300 rounded-md font-medium text-wood-800">25분 공부</button>
+                        <button onclick="setTimerPreset(50)" class="px-2.5 py-1 text-xs bg-wood-200 hover:bg-wood-300 rounded-md font-medium text-wood-800">50분 공부</button>
+                        <button onclick="setTimerPreset(1)" class="px-2.5 py-1 text-xs bg-emerald-200 hover:bg-emerald-300 rounded-md font-bold text-emerald-900 border border-emerald-400">1분 테스트</button>
+                        <button onclick="setTimerPreset(5)" class="px-2.5 py-1 text-xs bg-amber-200 hover:bg-amber-300 rounded-md font-medium text-amber-900">5분 휴식</button>
+                    </div>
+                </div>
+
+                <!-- TEST DIRECT BUTTON FOR REAL 3D CAT CHURU SYSTEM -->
+                <div class="bg-gradient-to-r from-amber-100 to-amber-200 border-2 border-amber-400 rounded-xl p-3.5 flex items-center justify-between shadow-md">
+                    <div class="text-xs">
+                        <span class="font-bold text-amber-950 block text-sm">🐟 3D 고양이 놀이터 소환</span>
+                        <span class="text-[10px] text-amber-800 font-medium">츄르 주기 & 장난감 & 쓰다듬기 🐾</span>
+                    </div>
+                    <button onclick="triggerChuruEvent()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition shadow-md active:scale-95">
+                        3D 놀이터 열기
+                    </button>
+                </div>
+
+                <!-- Ambient Noise Mixer -->
+                <div class="bg-wood-50 border-2 border-wood-300 rounded-2xl p-4 shadow-inner space-y-3">
+                    <div class="text-xs font-bold text-wood-800 flex items-center justify-between border-b border-wood-200 pb-2">
+                        <span><i class="fa-solid fa-sliders text-amber-700"></i> 레트로 백색소음 & BGM 믹서</span>
+                    </div>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex items-center justify-between gap-2">
+                            <button id="btn-sound-rain" onclick="toggleAmbientSound('rain')" class="bg-wood-300 hover:bg-wood-400 text-wood-800 px-2.5 py-1 rounded-lg text-xs font-bold transition w-24">🌧️ 빗소리</button>
+                            <input type="range" min="0" max="100" value="50" oninput="changeSoundVolume('rain', this.value)" class="w-full accent-amber-600">
+                        </div>
+                        <div class="flex items-center justify-between gap-2">
+                            <button id="btn-sound-purr" onclick="toggleAmbientSound('purr')" class="bg-wood-300 hover:bg-wood-400 text-wood-800 px-2.5 py-1 rounded-lg text-xs font-bold transition w-24">🐾 골골송</button>
+                            <input type="range" min="0" max="100" value="60" oninput="changeSoundVolume('purr', this.value)" class="w-full accent-amber-600">
+                        </div>
+                        <div class="flex items-center justify-between gap-2">
+                            <button id="btn-sound-lofi" onclick="toggleAmbientSound('lofi')" class="bg-wood-300 hover:bg-wood-400 text-wood-800 px-2.5 py-1 rounded-lg text-xs font-bold transition w-24">☕ 카페소음</button>
+                            <input type="range" min="0" max="100" value="40" oninput="changeSoundVolume('lofi', this.value)" class="w-full accent-amber-600">
+                        </div>
+                        <div class="flex items-center justify-between gap-2">
+                            <button id="btn-sound-fire" onclick="toggleAmbientSound('fire')" class="bg-wood-300 hover:bg-wood-400 text-wood-800 px-2.5 py-1 rounded-lg text-xs font-bold transition w-24">🔥 불멍</button>
+                            <input type="range" min="0" max="100" value="50" oninput="changeSoundVolume('fire', this.value)" class="w-full accent-amber-600">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: To-Do List -->
+            <div id="tab-content-todo" class="p-5 flex-1 flex flex-col gap-4 hidden">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-bold text-xs text-wood-800 font-gowun">오늘의 학업 목표</h3>
+                    <span id="todo-count" class="text-[10px] text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">0/0 완료</span>
+                </div>
+
+                <form onsubmit="addTodo(event)" class="flex gap-2">
+                    <input type="text" id="todo-input" placeholder="새 공부 목표 입력..." class="flex-1 px-3 py-2 text-xs border border-wood-300 rounded-xl focus:outline-none focus:border-amber-600 bg-white">
+                    <button type="submit" class="bg-wood-700 hover:bg-wood-800 text-white font-bold px-3 py-2 rounded-xl text-xs transition">추가</button>
+                </form>
+
+                <div id="todo-list" class="flex-1 overflow-y-auto space-y-2 pr-1"></div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Toast Floating Message -->
+    <div id="toast-msg" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-wood-800 text-amber-100 px-5 py-2.5 rounded-full border-2 border-amber-400 shadow-2xl z-50 flex items-center gap-2.5 opacity-0 transition-opacity duration-300 pointer-events-none text-xs font-bold">
+        <span id="toast-icon">🐾</span>
+        <span id="toast-text">알림 메세지</span>
+    </div>
+
+    <!-- MODAL 1: User Profile & Setup -->
+    <div id="modal-user-setup" class="fixed inset-0 bg-wood-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel w-full max-w-md rounded-2xl p-6 shadow-2xl border-4 border-wood-600 relative">
+            <div class="text-center mb-5">
+                <div class="w-14 h-14 bg-amber-600 text-amber-100 rounded-full flex items-center justify-center text-3xl mx-auto mb-2 border-2 border-amber-300 shadow">
+                    🎓
+                </div>
+                <h3 class="font-gowun text-lg font-bold text-wood-900">서울대 고양이 스터디 카페 입실</h3>
+                <p class="text-xs text-wood-600 mt-1">공부방에서 사용할 학생 이름과 아바타를 설정해 주세요 🐾</p>
+            </div>
+
+            <form onsubmit="saveUserSetup(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-wood-800 mb-1">학생 이름 (닉네임)</label>
+                    <input type="text" id="input-user-name" required placeholder="예: 김샤샤" 
+                           class="w-full px-3.5 py-2.5 text-xs border-2 border-wood-300 rounded-xl focus:outline-none focus:border-amber-600 bg-white">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-wood-800 mb-1.5">아바타 캐릭터 선택</label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <label class="avatar-option cursor-pointer border-2 border-amber-600 bg-amber-100 rounded-xl p-3 text-center transition flex flex-col items-center justify-center">
+                            <input type="radio" name="avatar" value="👩‍🎓" checked class="hidden">
+                            <span class="text-2xl mb-1">👩‍🎓</span>
+                            <span class="text-[10px] font-bold text-wood-800">여학생</span>
+                        </label>
+                        <label class="avatar-option cursor-pointer border-2 border-wood-300 rounded-xl p-3 text-center transition flex flex-col items-center justify-center hover:bg-wood-200">
+                            <input type="radio" name="avatar" value="👨‍🎓" class="hidden">
+                            <span class="text-2xl mb-1">👨‍🎓</span>
+                            <span class="text-[10px] font-bold text-wood-800">남학생</span>
+                        </label>
+                        <label class="avatar-option cursor-pointer border-2 border-wood-300 rounded-xl p-3 text-center transition flex flex-col items-center justify-center hover:bg-wood-200">
+                            <input type="radio" name="avatar" value="🐱" class="hidden">
+                            <span class="text-2xl mb-1">🐱</span>
+                            <span class="text-[10px] font-bold text-wood-800">냥학생</span>
+                        </label>
+                        <label class="avatar-option cursor-pointer border-2 border-wood-300 rounded-xl p-3 text-center transition flex flex-col items-center justify-center hover:bg-wood-200">
+                            <input type="radio" name="avatar" value="🐾" class="hidden">
+                            <span class="text-2xl mb-1">🐾</span>
+                            <span class="text-[10px] font-bold text-wood-800">젤리</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-wood-800 mb-1">오늘의 한 줄 목표 (선택)</label>
+                    <input type="text" id="input-user-goal" placeholder="예: 자료구조 과제 마치기!" 
+                           class="w-full px-3.5 py-2 text-xs border-2 border-wood-300 rounded-xl focus:outline-none focus:border-amber-600 bg-white">
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-xl text-xs transition shadow-lg border border-amber-400">
+                        입실 완료 및 좌석 앉기 📖
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Interactive 3D Cat Churu & Interaction Modal -->
+    <div id="modal-churu-reward" class="fixed inset-0 bg-wood-900/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel w-full max-w-2xl rounded-3xl p-6 shadow-2xl border-4 border-amber-500 relative flex flex-col items-center">
+            
+            <button onclick="closeChuruRewardModal()" class="absolute top-4 right-4 text-wood-600 hover:text-wood-900 text-xl font-bold bg-wood-200 rounded-full w-8 h-8 flex items-center justify-center">
+                ✕
+            </button>
+
+            <!-- Header Title -->
+            <div class="text-center mb-3">
+                <span class="text-xs font-bold text-amber-800 bg-amber-200 px-3 py-1 rounded-full border border-amber-400 inline-block mb-1">
+                    REAL 3D CAT INTERACTION
+                </span>
+                <h2 id="churu-cat-name-tag" class="font-gowun text-xl font-bold text-wood-900">
+                    [라떼] 귀여운 3D 고양이와 놀아주세요! 🐾
+                </h2>
+            </div>
+
+            <!-- Mode Switch Buttons -->
+            <div class="flex gap-2 mb-3">
+                <button id="mode-btn-churu" onclick="switchInteractionMode('churu')" class="px-3 py-1.5 bg-amber-600 text-white rounded-xl text-xs font-bold border border-amber-500 shadow">
+                    🐟 츄르 급여
+                </button>
+                <button id="mode-btn-toy" onclick="switchInteractionMode('toy')" class="px-3 py-1.5 bg-wood-200 text-wood-800 rounded-xl text-xs font-bold border border-wood-400 hover:bg-wood-300">
+                    🎾 깃털 장난감
+                </button>
+                <button id="mode-btn-pet" onclick="switchInteractionMode('pet')" class="px-3 py-1.5 bg-wood-200 text-wood-800 rounded-xl text-xs font-bold border border-wood-400 hover:bg-wood-300">
+                    🖐️ 머리 쓰다듬기
+                </button>
+            </div>
+
+            <!-- 3D Canvas Area -->
+            <div id="churu-canvas-container" class="w-full h-72 rounded-2xl border-4 border-wood-400 overflow-hidden shadow-inner relative bg-amber-50">
+                <div id="canvas-overlay-instruction" class="absolute bottom-3 left-1/2 -translate-x-1/2 bg-wood-900/80 text-amber-100 text-[11px] px-4 py-1.5 rounded-full pointer-events-none backdrop-blur-xs font-medium border border-amber-400/50">
+                    💡 츄르 스틱을 직접 잡고 고양이 입에 대어주세요
+                </div>
+            </div>
+
+            <!-- Interaction Progress Bar -->
+            <div class="w-full mt-4 bg-wood-200 p-3 rounded-2xl border border-wood-300 text-center">
+                <div class="flex justify-between items-center text-xs mb-1 font-bold">
+                    <span id="progress-bar-label" class="text-wood-800">츄르 급여 진행도</span>
+                    <span id="churu-fed-status-text" class="text-amber-800">0 %</span>
+                </div>
+                <div class="w-full bg-wood-300 h-3 rounded-full overflow-hidden border border-wood-400">
+                    <div id="churu-progress-bar" class="bg-gradient-to-r from-amber-500 to-amber-600 h-full w-0 transition-all duration-150"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: Cat Collection Gallery Modal -->
+    <div id="modal-cat-collection" class="fixed inset-0 bg-wood-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel w-full max-w-lg rounded-2xl p-6 shadow-2xl border-4 border-wood-600 relative">
+            <button onclick="closeCatCollectionModal()" class="absolute top-4 right-4 text-wood-600 hover:text-wood-900 text-xl font-bold bg-wood-200 rounded-full w-8 h-8 flex items-center justify-center">
+                ✕
+            </button>
+            <div class="text-center mb-4">
+                <h3 class="font-gowun text-lg font-bold text-wood-900">❤️ 냥이 친밀도 & 캣타워 도감</h3>
+                <p class="text-xs text-wood-600 mt-1">고양이들과 놀아주고 친밀도 레벨을 올려보세요 🐾</p>
+            </div>
+            <div id="cat-collection-grid" class="grid grid-cols-3 gap-3 my-2"></div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: Study Report & Heatmap Modal -->
+    <div id="modal-study-stats" class="fixed inset-0 bg-wood-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel w-full max-w-md rounded-2xl p-6 shadow-2xl border-4 border-wood-600 relative">
+            <button onclick="closeStatsModal()" class="absolute top-4 right-4 text-wood-600 hover:text-wood-900 text-xl font-bold bg-wood-200 rounded-full w-8 h-8 flex items-center justify-center">
+                ✕
+            </button>
+            <div class="text-center mb-4">
+                <h3 class="font-gowun text-lg font-bold text-wood-900">📊 나의 주간 공부 리포트</h3>
+                <p class="text-xs text-wood-600 mt-1">누적 공부 시간 및 뽀모도로 세션 수 기록 📖</p>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-2 text-center mb-4">
+                <div class="bg-amber-100 p-2.5 rounded-xl border border-amber-300">
+                    <div class="text-[10px] text-wood-600 font-bold">누적 공부 시간</div>
+                    <div id="stats-total-time" class="text-base font-extrabold text-amber-900">0 분</div>
+                </div>
+                <div class="bg-amber-100 p-2.5 rounded-xl border border-amber-300">
+                    <div class="text-[10px] text-wood-600 font-bold">완료 세션</div>
+                    <div id="stats-total-sessions" class="text-base font-extrabold text-amber-900">0 세션</div>
+                </div>
+                <div class="bg-amber-100 p-2.5 rounded-xl border border-amber-300">
+                    <div class="text-[10px] text-wood-600 font-bold">획득 츄르</div>
+                    <div id="stats-churu-count" class="text-base font-extrabold text-amber-900">0 개</div>
+                </div>
+            </div>
+
+            <div class="text-xs font-bold text-wood-800 mb-1.5">최근 4주 공부 연속 잔디밭 (GitHub Heatmap)</div>
+            <div id="heatmap-grid" class="grid grid-cols-7 gap-1.5 p-2 bg-wood-100 rounded-xl border border-wood-300"></div>
+        </div>
+    </div>
+
+    <!-- MODAL 5: TA Peter Counseling Modal -->
+    <div id="modal-peter-desk" class="fixed inset-0 bg-wood-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel w-full max-w-lg rounded-2xl p-6 shadow-2xl border-4 border-wood-600 relative flex flex-col h-[500px]">
+            <button onclick="closePeterDesk()" class="absolute top-4 right-4 text-wood-600 hover:text-wood-900 text-xl font-bold bg-wood-200 rounded-full w-8 h-8 flex items-center justify-center">
+                ✕
+            </button>
+            <div class="flex items-center gap-3 border-b border-wood-300 pb-3 mb-3">
+                <div class="w-10 h-10 bg-amber-600 text-white rounded-full flex items-center justify-center text-xl shadow">👨‍🏫</div>
+                <div>
+                    <h3 class="font-gowun text-base font-bold text-wood-900">서울대 조교 피터 상담소</h3>
+                    <p class="text-[11px] text-wood-600">공부가 지루하거나 조언이 필요할 때 언제든 대화해 보세요!</p>
+                </div>
+            </div>
+
+            <div id="chat-messages" class="flex-1 overflow-y-auto space-y-3 p-2 bg-wood-100/60 rounded-xl border border-wood-300 text-xs">
+                <div class="flex items-start gap-2.5">
+                    <div class="text-lg">👨‍🏫</div>
+                    <div class="bg-wood-200 text-wood-900 p-3 rounded-2xl rounded-tl-none max-w-[80%] border border-wood-300">
+                        안녕하세요! 조교 피터입니다 🐾 오늘 공부 목표는 무엇인가요? 지루하거나 막힐 때 편하게 말해주시면 도움을 드릴게요!
+                    </div>
+                </div>
+            </div>
+
+            <form onsubmit="handlePeterChat(event)" class="mt-3 flex gap-2">
+                <input type="text" id="chat-input" placeholder="피터 조교에게 고민 말하기..." class="flex-1 px-3.5 py-2.5 text-xs border border-wood-300 rounded-xl focus:outline-none focus:border-amber-600 bg-white">
+                <button type="submit" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shadow">전송</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript Engine -->
+    <script>
+        const state = {
+            user: {
+                name: '',
+                avatar: '👩‍🎓',
+                goal: '',
+                currentSeat: null
+            },
+            churuCount: 0,
+            timer: {
+                totalSeconds: 25 * 60,
+                currentSeconds: 25 * 60,
+                interval: null,
+                isRunning: false,
+                mode: 'study',
+                accumulatedSeconds: 0,
+                completedSessions: 0
+            },
+            todos: [],
+            sounds: {
+                rain: { ctx: null, gain: null, isPlaying: false, vol: 0.5 },
+                purr: { ctx: null, gain: null, isPlaying: false, vol: 0.6 },
+                lofi: { ctx: null, gain: null, isPlaying: false, vol: 0.4 },
+                fire: { ctx: null, gain: null, isPlaying: false, vol: 0.5 }
+            },
+            catFriendship: {
+                '라떼': { exp: 0, level: 1, maxExp: 100 },
+                '치즈': { exp: 0, level: 1, maxExp: 100 },
+                '백설이': { exp: 0, level: 1, maxExp: 100 }
+            },
+            interactionMode: 'churu' // 'churu', 'toy', 'pet'
+        };
+
+        const quotes = [
+            "\"작은 목표를 하나씩 달성하다 보면 어느새 큰 과제도 끝나있을 거예요!\"",
+            "\"서울대 컴공 꿀팁: 에러 메시지는 시비가 아니라 친절한 힌트입니다 💡\"",
+            "\"타이머 세션을 완료하고 3D 고양이에게 츄르를 챙겨주세요! 🐟\"",
+            "\"뽀모도로 25분 몰입 후 5분 쉬는 루틴이 최고 효율입니다!\""
+        ];
+
+        window.onload = function() {
+            document.querySelectorAll('.avatar-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    document.querySelectorAll('.avatar-option').forEach(o => o.classList.remove('border-amber-600', 'bg-amber-100'));
+                    this.classList.add('border-amber-600', 'bg-amber-100');
+                });
+            });
+
+            setInterval(() => {
+                const random = quotes[Math.floor(Math.random() * quotes.length)];
+                const quoteEl = document.getElementById('random-quote');
+                if (quoteEl) quoteEl.innerText = random;
+            }, 12000);
+
+            state.todos = [
+                { id: 1, text: '서울대 고양이 공부방 입실하기', completed: true },
+                { id: 2, text: '25분 몰입 공부하고 3D 고양이 츄르 주기', completed: false }
+            ];
+            renderTodos();
+
+            // Initialize Three.js Engine
+            initRealistic3DCatScene();
+        };
+
+        /* 1. User Setup & Seat Selection */
+        function saveUserSetup(e) {
+            e.preventDefault();
+            const nameInput = document.getElementById('input-user-name');
+            const avatarInput = document.querySelector('input[name="avatar"]:checked');
+            const goalInput = document.getElementById('input-user-goal');
+
+            if (!nameInput || !nameInput.value.trim()) return;
+
+            state.user.name = nameInput.value.trim();
+            state.user.avatar = avatarInput ? avatarInput.value : '👩‍🎓';
+            state.user.goal = goalInput ? goalInput.value.trim() : '열심히 공부하기';
+
+            document.getElementById('user-name-display').innerText = state.user.name;
+            document.getElementById('user-avatar-display').innerText = state.user.avatar;
+            document.getElementById('user-badge').classList.remove('hidden');
+
+            document.getElementById('modal-user-setup').classList.add('hidden');
+            
+            if (state.user.currentSeat) {
+                selectSeat(state.user.currentSeat, `부스 #${state.user.currentSeat}번`);
+            } else {
+                showToast('🐾', `반갑습니다, ${state.user.name}님! 원하시는 부스 좌석을 클릭해 보세요.`);
+            }
+        }
+
+        function selectSeat(seatId, seatName) {
+            state.user.currentSeat = seatId;
+
+            if (!state.user.name) {
+                document.getElementById('modal-user-setup').classList.remove('hidden');
+                return;
+            }
+
+            // Reset previous seat card styles if any
+            for (let i = 1; i <= 8; i++) {
+                const sc = document.getElementById(`seat-${i}`);
+                if (sc && i !== seatId) {
+                    sc.classList.remove('border-amber-600', 'bg-amber-100/90');
+                    sc.classList.add('bg-wood-200');
+                    const badge = sc.querySelector('.status-badge');
+                    if (badge) {
+                        badge.innerText = '비어있음';
+                        badge.className = 'status-badge text-[10px] bg-emerald-100 text-emerald-800 font-medium px-2 py-0.5 rounded-full border border-emerald-300';
+                    }
+                    const avatarHolder = sc.querySelector('.avatar-holder');
+                    if (avatarHolder) {
+                        avatarHolder.innerHTML = '🪑';
+                        avatarHolder.classList.add('opacity-60');
+                    }
+                }
+            }
+
+            const seatCard = document.getElementById(`seat-${seatId}`);
+            if (seatCard) {
+                seatCard.classList.remove('bg-wood-200');
+                seatCard.classList.add('border-amber-600', 'bg-amber-100/90');
+
+                const badge = seatCard.querySelector('.status-badge');
+                if (badge) {
+                    badge.innerText = `${state.user.name} 착석 중`;
+                    badge.className = 'status-badge text-[10px] bg-amber-600 text-white font-bold px-2 py-0.5 rounded-full shadow-xs';
+                }
+
+                const avatarHolder = seatCard.querySelector('.avatar-holder');
+                if (avatarHolder) {
+                    avatarHolder.innerHTML = `<span class="text-3xl animate-bounce">${state.user.avatar}</span>`;
+                    avatarHolder.classList.remove('opacity-60');
+                }
+
+                document.getElementById('user-seat-display').innerText = `부스 #${seatId}번 (${seatName}) 착석`;
+                showToast('☕', `[${seatName}]에 ${state.user.name} 학생 아바타가 착석했습니다!`);
+            }
+        }
+
+        /* 2. Timer Control Functions */
+        function toggleTimer() {
+            if (state.timer.isRunning) {
+                clearInterval(state.timer.interval);
+                state.timer.isRunning = false;
+                document.getElementById('btn-timer-start').classList.remove('bg-red-700', 'hover:bg-red-800');
+                document.getElementById('btn-timer-start').classList.add('bg-wood-700', 'hover:bg-wood-800');
+                document.getElementById('timer-start-text').innerText = '공부 재개';
+            } else {
+                state.timer.isRunning = true;
+                document.getElementById('btn-timer-start').classList.remove('bg-wood-700', 'hover:bg-wood-800');
+                document.getElementById('btn-timer-start').classList.add('bg-red-700', 'hover:bg-red-800');
+                document.getElementById('timer-start-text').innerText = '일시 정지';
+
+                state.timer.interval = setInterval(() => {
+                    if (state.timer.currentSeconds > 0) {
+                        state.timer.currentSeconds--;
+                        state.timer.accumulatedSeconds++;
+                        updateTimerDisplay();
+                    } else {
+                        clearInterval(state.timer.interval);
+                        state.timer.isRunning = false;
+                        playCatMeowAudio();
+
+                        if (state.timer.mode === 'study') {
+                            state.timer.completedSessions++;
+                            triggerChuruEvent();
+                            setTimerPreset(5, 'break');
+                        } else {
+                            showToast('🔔', '휴식이 끝났습니다! 다시 우드 부스에서 열공해봅시다 📖');
+                            setTimerPreset(25, 'study');
+                        }
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(state.timer.interval);
+            state.timer.isRunning = false;
+            state.timer.currentSeconds = state.timer.totalSeconds;
+            document.getElementById('btn-timer-start').classList.remove('bg-red-700', 'hover:bg-red-800');
+            document.getElementById('btn-timer-start').classList.add('bg-wood-700', 'hover:bg-wood-800');
+            document.getElementById('timer-start-text').innerText = '공부 시작';
+            updateTimerDisplay();
+        }
+
+        function setTimerPreset(minutes, mode = 'study') {
+            state.timer.mode = mode;
+            state.timer.totalSeconds = minutes * 60;
+            state.timer.currentSeconds = minutes * 60;
+            document.getElementById('timer-mode-label').innerText = mode === 'study' ? '집중 공부 시간 🧠' : '고양이와 휴식 시간 ☕';
+            resetTimer();
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(state.timer.currentSeconds / 60);
+            const secs = state.timer.currentSeconds % 60;
+            document.getElementById('timer-display').innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            const pct = ((state.timer.totalSeconds - state.timer.currentSeconds) / state.timer.totalSeconds) * 100;
+            document.getElementById('timer-progress').style.width = `${pct}%`;
+        }
+
+        /* 3. REFINED CUTE 3D CAT & SLOW CHURU SYSTEM WITH TOY & PETTING MODES */
+        let scene, camera, renderer;
+        let catRootGroup, catHeadGroup, catMouthMesh, catMouthInner, catTailMesh;
+        let catEarL, catEarR, catEyeL, catEyeR;
+        let churuGroup, churuCreamTip, toyGroup;
+        let heartParticles = [];
+        let raycaster, mousePlane;
+        let isChuruDragging = false;
+        let churuProgress = 0;
+        let toyProgress = 0;
+        let petProgress = 0;
+        let isCompletedThisSession = false;
+        let activeCatPreset = null;
+
+        // Custom Preset Config inspired by user photo attachments
+        const catPresets = [
+            { 
+                name: '라떼', 
+                color: 0xE8DEC8, 
+                maskColor: 0x2C1D11, 
+                earColor: 0x24160C, 
+                eyes: 0x1E90FF, 
+                pupilSize: 0.75, 
+                type: 'siamese', 
+                desc: '동그란 대왕 파란 눈과 초콜릿빛 마스크 🤎' 
+            },
+            { 
+                name: '치즈', 
+                color: 0xE69635, 
+                maskColor: 0xD35400, 
+                earColor: 0xCA6F1E, 
+                eyes: 0xB87333, 
+                pupilSize: 0.65, 
+                type: 'orange', 
+                desc: '아련한 눈망울과 따뜻한 앰버빛 털 🧡' 
+            },
+            { 
+                name: '백설이', 
+                color: 0xFFFFFF, 
+                maskColor: 0xFFFFFF, 
+                earColor: 0xFFB6C1, 
+                eyes: 0x00BFFF, 
+                pupilSize: 0.8, 
+                type: 'white_smile', 
+                desc: '방긋 해맑게 웃는 핑크코 블루아이 🤍' 
+            }
+        ];
+
+        function initRealistic3DCatScene() {
+            const container = document.getElementById('churu-canvas-container');
+            if (!container) return;
+            const w = container.clientWidth || 600;
+            const h = container.clientHeight || 320;
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xFFFBF0);
+
+            camera = new THREE.PerspectiveCamera(38, w / h, 0.1, 100);
+            camera.position.set(0, 0.9, 4.8);
+            camera.lookAt(0, 0.2, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(w, h);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            
+            container.innerHTML = '';
+            container.appendChild(renderer.domElement);
+
+            raycaster = new THREE.Raycaster();
+            mousePlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+
+            // Soft Cozy Lighting
+            const ambient = new THREE.AmbientLight(0xFFF5EA, 1.0);
+            scene.add(ambient);
+
+            const sunLight = new THREE.DirectionalLight(0xFFEAA7, 1.3);
+            sunLight.position.set(3, 5, 4);
+            sunLight.castShadow = true;
+            scene.add(sunLight);
+
+            const fillLight = new THREE.DirectionalLight(0x74B9FF, 0.4);
+            fillLight.position.set(-3, 2, -2);
+            scene.add(fillLight);
+
+            // Ground Floor
+            const floorGeo = new THREE.PlaneGeometry(10, 10);
+            const floorMat = new THREE.ShadowMaterial({ opacity: 0.12 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -1.1;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Build Initial 3D Cat
+            activeCatPreset = catPresets[0];
+            buildDetailedCatMesh(activeCatPreset);
+
+            // Build 3D Churu Stick & Feather Toy
+            buildChuruStickMesh();
+            buildToyMesh();
+
+            // Setup Controls
+            const canvas = renderer.domElement;
+
+            const onPointerDown = (e) => {
+                isChuruDragging = true;
+                handlePointerAction(e);
+            };
+
+            const onPointerMove = (e) => {
+                if (isChuruDragging || state.interactionMode === 'toy') {
+                    handlePointerAction(e);
+                }
+            };
+
+            const onPointerUp = () => {
+                isChuruDragging = false;
+            };
+
+            canvas.addEventListener('mousedown', onPointerDown);
+            window.addEventListener('mousemove', onPointerMove);
+            window.addEventListener('mouseup', onPointerUp);
+
+            canvas.addEventListener('touchstart', (e) => {
+                if (e.touches.length > 0) {
+                    isChuruDragging = true;
+                    handlePointerAction(e.touches[0]);
+                }
+            }, { passive: true });
+            window.addEventListener('touchmove', (e) => {
+                if (e.touches.length > 0) {
+                    handlePointerAction(e.touches[0]);
+                }
+            }, { passive: true });
+            window.addEventListener('touchend', onPointerUp);
+
+            window.addEventListener('resize', () => {
+                if (!container) return;
+                const rw = container.clientWidth;
+                const rh = container.clientHeight;
+                if (rw > 0 && rh > 0) {
+                    camera.aspect = rw / rh;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(rw, rh);
+                }
+            });
+
+            render3DCatLoop();
+        }
+
+        function buildDetailedCatMesh(preset) {
+            if (catRootGroup) scene.remove(catRootGroup);
+
+            catRootGroup = new THREE.Group();
+            catRootGroup.position.set(0, -0.3, 0);
+
+            const mainMat = new THREE.MeshStandardMaterial({ color: preset.color, roughness: 0.5 });
+            const maskMat = new THREE.MeshStandardMaterial({ color: preset.maskColor, roughness: 0.5 });
+            const earMat = new THREE.MeshStandardMaterial({ color: preset.earColor, roughness: 0.4 });
+            const whiteMat = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.5 });
+            const pinkMat = new THREE.MeshStandardMaterial({ color: 0xFFB6C1, roughness: 0.4 });
+            const eyeMat = new THREE.MeshStandardMaterial({ color: preset.eyes, roughness: 0.1 });
+            const pupilMat = new THREE.MeshBasicMaterial({ color: 0x050505 });
+
+            // Body
+            const bodyGeo = new THREE.SphereGeometry(0.85, 32, 32);
+            bodyGeo.scale(1.02, 1.0, 0.98);
+            const body = new THREE.Mesh(bodyGeo, mainMat);
+            body.position.set(0, 0, 0);
+            body.castShadow = true;
+            catRootGroup.add(body);
+
+            // Chest bib
+            const chestGeo = new THREE.SphereGeometry(0.55, 24, 24);
+            chestGeo.scale(0.85, 0.9, 0.5);
+            const chest = new THREE.Mesh(chestGeo, preset.type === 'siamese' ? whiteMat : (preset.type === 'orange' ? whiteMat : mainMat));
+            chest.position.set(0, -0.05, 0.62);
+            catRootGroup.add(chest);
+
+            // Paws
+            const pawGeo = new THREE.SphereGeometry(0.2, 16, 16);
+            pawGeo.scale(1.0, 0.6, 1.3);
+            const pawL = new THREE.Mesh(pawGeo, preset.type === 'siamese' ? earMat : whiteMat);
+            pawL.position.set(-0.35, -0.72, 0.65);
+            pawL.castShadow = true;
+            const pawR = new THREE.Mesh(pawGeo, preset.type === 'siamese' ? earMat : whiteMat);
+            pawR.position.set(0.35, -0.72, 0.65);
+            pawR.castShadow = true;
+            catRootGroup.add(pawL);
+            catRootGroup.add(pawR);
+
+            // Head Group
+            catHeadGroup = new THREE.Group();
+            catHeadGroup.position.set(0, 0.95, 0.15);
+
+            const headGeo = new THREE.SphereGeometry(0.74, 32, 32);
+            headGeo.scale(1.15, 0.94, 1.0);
+            const head = new THREE.Mesh(headGeo, mainMat);
+            head.castShadow = true;
+            catHeadGroup.add(head);
+
+            // Siamese Facial Dark Mask (Photo 1)
+            if (preset.type === 'siamese') {
+                const maskGeo = new THREE.SphereGeometry(0.42, 24, 24);
+                maskGeo.scale(1.1, 0.85, 0.65);
+                const mask = new THREE.Mesh(maskGeo, maskMat);
+                mask.position.set(0, -0.02, 0.52);
+                catHeadGroup.add(mask);
+            }
+
+            // Ears
+            const earGeo = new THREE.ConeGeometry(0.26, 0.52, 16);
+            catEarL = new THREE.Mesh(earGeo, earMat);
+            catEarL.position.set(-0.48, 0.58, 0.05);
+            catEarL.rotation.set(0, 0, 0.28);
+            catEarL.castShadow = true;
+
+            catEarR = new THREE.Mesh(earGeo, earMat);
+            catEarR.position.set(0.48, 0.58, 0.05);
+            catEarR.rotation.set(0, 0, -0.28);
+            catEarR.castShadow = true;
+
+            // Inner Pink Ear for White Cat (Photo 3)
+            if (preset.type === 'white_smile') {
+                const innerEarGeo = new THREE.ConeGeometry(0.18, 0.4, 12);
+                const inL = new THREE.Mesh(innerEarGeo, pinkMat);
+                inL.position.set(-0.45, 0.56, 0.08);
+                inL.rotation.set(0, 0, 0.28);
+                const inR = new THREE.Mesh(innerEarGeo, pinkMat);
+                inR.position.set(0.45, 0.56, 0.08);
+                inR.rotation.set(0, 0, -0.28);
+                catHeadGroup.add(inL);
+                catHeadGroup.add(inR);
+            }
+
+            catHeadGroup.add(catEarL);
+            catHeadGroup.add(catEarR);
+
+            // Muzzle Cheeks
+            const muzzleGeo = new THREE.SphereGeometry(0.22, 16, 16);
+            muzzleGeo.scale(1.25, 0.75, 0.8);
+            const muzzle = new THREE.Mesh(muzzleGeo, preset.type === 'siamese' ? maskMat : whiteMat);
+            muzzle.position.set(0, -0.15, 0.64);
+            catHeadGroup.add(muzzle);
+
+            // Cute Nose
+            const noseGeo = new THREE.SphereGeometry(0.065, 12, 12);
+            noseGeo.scale(1.2, 0.8, 0.8);
+            const nose = new THREE.Mesh(noseGeo, preset.type === 'siamese' ? maskMat : pinkMat);
+            nose.position.set(0, -0.07, 0.81);
+            catHeadGroup.add(nose);
+
+            // Mouth
+            const mouthGeo = new THREE.SphereGeometry(0.09, 12, 12);
+            mouthGeo.scale(1.0, preset.type === 'white_smile' ? 0.7 : 0.35, 0.8);
+            catMouthMesh = new THREE.Mesh(mouthGeo, pinkMat);
+            catMouthMesh.position.set(0, -0.21, 0.68);
+            catHeadGroup.add(catMouthMesh);
+
+            const mouthInnerGeo = new THREE.SphereGeometry(0.07, 10, 10);
+            catMouthInner = new THREE.Mesh(mouthInnerGeo, new THREE.MeshBasicMaterial({ color: 0x990011 }));
+            catMouthInner.position.set(0, -0.21, 0.7);
+            catMouthInner.scale.set(preset.type === 'white_smile' ? 0.8 : 0.1, preset.type === 'white_smile' ? 0.8 : 0.1, 0.1);
+            catHeadGroup.add(catMouthInner);
+
+            // Eyes
+            const eyeGeo = new THREE.SphereGeometry(0.155, 24, 24);
+            const pupilGeo = new THREE.SphereGeometry(0.12 * preset.pupilSize, 16, 16);
+
+            catEyeL = new THREE.Group();
+            const eL = new THREE.Mesh(eyeGeo, eyeMat);
+            const pL = new THREE.Mesh(pupilGeo, pupilMat);
+            pL.position.set(0, 0, 0.1);
+            catEyeL.add(eL);
+            catEyeL.add(pL);
+            catEyeL.position.set(-0.32, 0.1, 0.63);
+
+            catEyeR = new THREE.Group();
+            const eR = new THREE.Mesh(eyeGeo, eyeMat);
+            const pR = new THREE.Mesh(pupilGeo, pupilMat);
+            pR.position.set(0, 0, 0.1);
+            catEyeR.add(eR);
+            catEyeR.add(pR);
+            catEyeR.position.set(0.32, 0.1, 0.63);
+
+            catHeadGroup.add(catEyeL);
+            catHeadGroup.add(catEyeR);
+
+            catRootGroup.add(catHeadGroup);
+
+            // Tail
+            const tailGeo = new THREE.CylinderGeometry(0.08, 0.11, 1.2, 12);
+            tailGeo.translate(0, 0.6, 0);
+            catTailMesh = new THREE.Mesh(tailGeo, preset.type === 'siamese' ? earMat : mainMat);
+            catTailMesh.position.set(0, -0.6, -0.5);
+            catTailMesh.rotation.set(-Math.PI / 3.5, 0, 0);
+            catTailMesh.castShadow = true;
+            catRootGroup.add(catTailMesh);
+
+            scene.add(catRootGroup);
+        }
+
+        function buildChuruStickMesh() {
+            churuGroup = new THREE.Group();
+
+            const stickGeo = new THREE.CylinderGeometry(0.09, 0.09, 1.6, 16);
+            const stickMat = new THREE.MeshStandardMaterial({ color: 0xEE4266, roughness: 0.3, metalness: 0.3 });
+            const stick = new THREE.Mesh(stickGeo, stickMat);
+            stick.rotation.z = Math.PI / 4;
+            stick.castShadow = true;
+            churuGroup.add(stick);
+
+            const creamGeo = new THREE.SphereGeometry(0.12, 16, 16);
+            const creamMat = new THREE.MeshBasicMaterial({ color: 0xFFEEAA });
+            churuCreamTip = new THREE.Mesh(creamGeo, creamMat);
+            churuCreamTip.position.set(-0.68, 0.68, 0);
+            churuGroup.add(churuCreamTip);
+
+            churuGroup.position.set(1.8, -0.6, 1.0);
+            scene.add(churuGroup);
+        }
+
+        function buildToyMesh() {
+            toyGroup = new THREE.Group();
+
+            const stickGeo = new THREE.CylinderGeometry(0.03, 0.03, 1.8, 12);
+            const stickMat = new THREE.MeshBasicMaterial({ color: 0xE74C3C });
+            const stick = new THREE.Mesh(stickGeo, stickMat);
+            stick.rotation.z = Math.PI / 6;
+            toyGroup.add(stick);
+
+            const featherGeo = new THREE.ConeGeometry(0.15, 0.4, 8);
+            const featherMat = new THREE.MeshBasicMaterial({ color: 0xF1C40F });
+            const feather = new THREE.Mesh(featherGeo, featherMat);
+            feather.position.set(-0.7, 0.8, 0);
+            toyGroup.add(feather);
+
+            toyGroup.position.set(1.5, -0.4, 1.0);
+            toyGroup.visible = false;
+            scene.add(toyGroup);
+        }
+
+        function switchInteractionMode(mode) {
+            state.interactionMode = mode;
+            document.querySelectorAll('[id^="mode-btn-"]').forEach(btn => {
+                btn.className = 'px-3 py-1.5 bg-wood-200 text-wood-800 rounded-xl text-xs font-bold border border-wood-400 hover:bg-wood-300';
+            });
+            const activeBtn = document.getElementById(`mode-btn-${mode}`);
+            if (activeBtn) activeBtn.className = 'px-3 py-1.5 bg-amber-600 text-white rounded-xl text-xs font-bold border border-amber-500 shadow';
+
+            const tip = document.getElementById('canvas-overlay-instruction');
+            const progressLabel = document.getElementById('progress-bar-label');
+            const statusText = document.getElementById('churu-fed-status-text');
+
+            if (mode === 'churu') {
+                if (churuGroup) churuGroup.visible = true;
+                if (toyGroup) toyGroup.visible = false;
+                if (tip) tip.innerText = '💡 츄르 스틱을 직접 잡고 고양이 입에 대어주세요';
+                if (progressLabel) progressLabel.innerText = '츄르 급여 진행도';
+                if (statusText) statusText.innerText = `${Math.floor(churuProgress)} % (츄르를 드래그해서 고양이 입에 대어주세요)`;
+                updateProgressBar(churuProgress);
+            } else if (mode === 'toy') {
+                if (churuGroup) churuGroup.visible = false;
+                if (toyGroup) toyGroup.visible = true;
+                if (tip) tip.innerText = '💡 깃털 장난감을 마우스로 이리저리 흔들어보세요';
+                if (progressLabel) progressLabel.innerText = '장난감 반응 호감도';
+                if (statusText) statusText.innerText = `${Math.floor(toyProgress)} % (깃털을 흔들어 고양이의 시선을 사로잡으세요)`;
+                updateProgressBar(toyProgress);
+            } else if (mode === 'pet') {
+                if (churuGroup) churuGroup.visible = false;
+                if (toyGroup) toyGroup.visible = false;
+                if (tip) tip.innerText = '💡 고양이 머리 부위를 클릭/드래그하여 골골송을 유도하세요';
+                if (progressLabel) progressLabel.innerText = '쓰다듬기 골골송 게이지';
+                if (statusText) statusText.innerText = `${Math.floor(petProgress)} % (머리 부위를 부드럽게 쓰다듬어주세요)`;
+                updateProgressBar(petProgress);
+            }
+        }
+
+        function updateProgressBar(val) {
+            const bar = document.getElementById('churu-progress-bar');
+            if (bar) bar.style.width = `${Math.min(100, Math.max(0, val))}%`;
+        }
+
+        function handlePointerAction(e) {
+            if (!camera || !renderer) return;
+
+            const container = document.getElementById('churu-canvas-container');
+            const rect = container.getBoundingClientRect();
+
+            const mouseX = ((e.clientX - rect.left) / container.clientWidth) * 2 - 1;
+            const mouseY = -((e.clientY - rect.top) / container.clientHeight) * 2 + 1;
+
+            raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera);
+            const targetPos = new THREE.Vector3();
+            raycaster.ray.intersectPlane(mousePlane, targetPos);
+
+            if (targetPos) {
+                if (state.interactionMode === 'churu' && churuGroup) {
+                    churuGroup.position.x += (targetPos.x - churuGroup.position.x) * 0.4;
+                    churuGroup.position.y += (targetPos.y - churuGroup.position.y) * 0.4;
+                } else if (state.interactionMode === 'toy' && toyGroup) {
+                    toyGroup.position.x += (targetPos.x - toyGroup.position.x) * 0.4;
+                    toyGroup.position.y += (targetPos.y - toyGroup.position.y) * 0.4;
+                    
+                    if (toyProgress < 100) {
+                        toyProgress += 0.35;
+                        if (toyProgress > 100) toyProgress = 100;
+                        updateProgressBar(toyProgress);
+                        const statusText = document.getElementById('churu-fed-status-text');
+                        if (statusText) statusText.innerText = `${Math.floor(toyProgress)} % (신나게 장난감을 노리는 중 🐾)`;
+
+                        if (toyProgress >= 100 && !isCompletedThisSession) {
+                            isCompletedThisSession = true;
+                            if (typeof confetti === 'function') confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+                            showToast('🎾', '장난감 놀아주기 만족도 100% 달성!');
+                        }
+                    }
+                    addCatFriendshipExp(activeCatPreset.name, 0.05);
+                } else if (state.interactionMode === 'pet') {
+                    const mouthWorldPos = new THREE.Vector3();
+                    catHeadGroup.getWorldPosition(mouthWorldPos);
+                    if (targetPos.distanceTo(mouthWorldPos) < 1.0) {
+                        spawnHeartParticle(targetPos);
+                        
+                        if (petProgress < 100) {
+                            petProgress += 0.4;
+                            if (petProgress > 100) petProgress = 100;
+                            updateProgressBar(petProgress);
+                            const statusText = document.getElementById('churu-fed-status-text');
+                            if (statusText) statusText.innerText = `${Math.floor(petProgress)} % (기분 좋아서 골골송을 불러요 💕)`;
+
+                            if (petProgress >= 100 && !isCompletedThisSession) {
+                                isCompletedThisSession = true;
+                                if (typeof confetti === 'function') confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+                                showToast('💖', '쓰다듬기 골골송 만족도 100% 달성!');
+                            }
+                        }
+                        addCatFriendshipExp(activeCatPreset.name, 0.15);
+                        if (Math.random() < 0.05) playCatMeowAudio();
+                    }
+                }
+            }
+        }
+
+        function addCatFriendshipExp(catName, expAmount) {
+            const data = state.catFriendship[catName];
+            if (!data) return;
+
+            data.exp += expAmount;
+            if (data.exp >= data.maxExp && data.level < 5) {
+                data.level++;
+                data.exp = 0;
+                showToast('💖', `[${catName}]와의 친밀도가 Lv.${data.level}로 호감도 UP!`);
+            }
+        }
+
+        function spawnHeartParticle(pos) {
+            const heartGeo = new THREE.SphereGeometry(0.05, 8, 8);
+            const heartMat = new THREE.MeshBasicMaterial({ color: 0xFF4757 });
+            const heart = new THREE.Mesh(heartGeo, heartMat);
+            heart.position.copy(pos);
+            heart.position.x += (Math.random() - 0.5) * 0.3;
+            heart.position.y += (Math.random() - 0.5) * 0.2;
+            scene.add(heart);
+
+            heartParticles.push({
+                mesh: heart,
+                vy: 0.015 + Math.random() * 0.015,
+                life: 1.0
+            });
+        }
+
+        function render3DCatLoop() {
+            requestAnimationFrame(render3DCatLoop);
+
+            const time = Date.now() * 0.003;
+
+            if (catRootGroup && catHeadGroup && churuGroup) {
+                catRootGroup.position.y = -0.3 + Math.sin(time * 2) * 0.02;
+                if (catTailMesh) {
+                    catTailMesh.rotation.z = Math.sin(time * 2.2) * 0.2;
+                }
+
+                // Blink
+                const blink = Math.sin(time * 0.8);
+                if (blink > 0.97) {
+                    catEyeL.scale.y = 0.1;
+                    catEyeR.scale.y = 0.1;
+                } else {
+                    catEyeL.scale.y = 1.0;
+                    catEyeR.scale.y = 1.0;
+                }
+
+                const mouthWorldPos = new THREE.Vector3();
+                catMouthMesh.getWorldPosition(mouthWorldPos);
+
+                const creamWorldPos = new THREE.Vector3();
+                churuCreamTip.getWorldPosition(creamWorldPos);
+
+                const dist = creamWorldPos.distanceTo(mouthWorldPos);
+
+                catHeadGroup.lookAt(creamWorldPos.x * 0.3, creamWorldPos.y * 0.3 + 0.95, creamWorldPos.z * 0.5 + 2.0);
+
+                // Feed Criteria
+                if (dist <= 0.65 && isChuruDragging && state.interactionMode === 'churu') {
+                    const nomNom = Math.abs(Math.sin(time * 10));
+                    catMouthMesh.scale.set(1.0 + nomNom * 0.4, 1.0 + nomNom * 1.0, 1.0);
+                    if (catMouthInner) catMouthInner.scale.set(1.0 + nomNom * 1.8, 1.0 + nomNom * 1.8, 1.0);
+
+                    if (churuProgress < 100) {
+                        churuProgress += 0.2;
+                        if (churuProgress > 100) churuProgress = 100;
+
+                        const creamScale = Math.max(0.2, 1.0 - (churuProgress / 100) * 0.7);
+                        churuCreamTip.scale.set(creamScale, creamScale, creamScale);
+
+                        document.getElementById('churu-progress-bar').style.width = `${churuProgress}%`;
+                        document.getElementById('churu-fed-status-text').innerText = `${Math.floor(churuProgress)} % (오물오물 핥아먹는 중 😋)`;
+
+                        if (Math.random() < 0.15) {
+                            spawnHeartParticle(mouthWorldPos);
+                        }
+
+                        if (Math.random() < 0.03) {
+                            playCatMeowAudio();
+                        }
+                    }
+
+                    if (churuProgress >= 100 && !isCompletedThisSession) {
+                        isCompletedThisSession = true;
+                        state.churuCount++;
+                        document.getElementById('churu-count-display').innerText = `${state.churuCount} 개`;
+
+                        document.getElementById('churu-fed-status-text').innerText = `100% 완료! 🎉 츄르 미션 성공!`;
+                        showToast('🌟', '축하합니다! 고양이가 츄르를 깨끗하게 완식했습니다! (+1 츄르)');
+
+                        if (typeof confetti === 'function') {
+                            confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+                        }
+                    }
+
+                } else {
+                    catMouthMesh.scale.set(1.0, 1.0, 1.0);
+                    if (catMouthInner) catMouthInner.scale.set(0.1, 0.1, 0.1);
+                }
+
+                // Update Heart Particles
+                for (let i = heartParticles.length - 1; i >= 0; i--) {
+                    const hp = heartParticles[i];
+                    hp.mesh.position.y += hp.vy;
+                    hp.life -= 0.035;
+                    hp.mesh.scale.multiplyScalar(0.96);
+                    if (hp.life <= 0) {
+                        scene.remove(hp.mesh);
+                        heartParticles.splice(i, 1);
+                    }
+                }
+            }
+
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
+        }
+
+        function triggerChuruEvent() {
+            const idx = Math.floor(Math.random() * catPresets.length);
+            activeCatPreset = catPresets[idx];
+
+            const nameTag = document.getElementById('churu-cat-name-tag');
+            if (nameTag) {
+                nameTag.innerText = `[${activeCatPreset.name}] 귀여운 고양이와 놀아주세요! 🐾`;
+            }
+            
+            buildDetailedCatMesh(activeCatPreset);
+
+            churuProgress = 0;
+            toyProgress = 0;
+            petProgress = 0;
+            isCompletedThisSession = false;
+            
+            if (churuGroup) churuGroup.position.set(1.8, -0.6, 1.0);
+            if (churuCreamTip) churuCreamTip.scale.set(1.0, 1.0, 1.0);
+
+            switchInteractionMode('churu');
+            
+            const rewardModal = document.getElementById('modal-churu-reward');
+            if (rewardModal) rewardModal.classList.remove('hidden');
+        }
+
+        function closeChuruRewardModal() {
+            const rewardModal = document.getElementById('modal-churu-reward');
+            if (rewardModal) rewardModal.classList.add('hidden');
+        }
+
+        function closeChuruRewardModal() {
+            document.getElementById('modal-churu-reward').classList.add('hidden');
+        }
+
+        /* 4. Audio Synthesizer & BGM Volume Mixer */
+        function playCatMeowAudio() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                const ctx = new AudioCtx();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(480, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(780, ctx.currentTime + 0.15);
+                osc.frequency.exponentialRampToValueAtTime(320, ctx.currentTime + 0.4);
+
+                gain.gain.setValueAtTime(0.01, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.08);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start();
+                osc.stop(ctx.currentTime + 0.45);
+            } catch(e) {}
+        }
+
+        function changeSoundVolume(type, val) {
+            const soundObj = state.sounds[type];
+            soundObj.vol = val / 100;
+            if (soundObj.gain && soundObj.ctx) {
+                soundObj.gain.gain.setValueAtTime(soundObj.vol * 0.3, soundObj.ctx.currentTime);
+            }
+        }
+
+        function toggleAmbientSound(type) {
+            const btn = document.getElementById(`btn-sound-${type}`);
+            const soundObj = state.sounds[type];
+
+            if (soundObj.isPlaying) {
+                if (soundObj.gain && soundObj.ctx) {
+                    try {
+                        soundObj.gain.gain.linearRampToValueAtTime(0.001, soundObj.ctx.currentTime + 0.3);
+                    } catch(e) {}
+                }
+                
+                const ctxToClose = soundObj.ctx;
+                soundObj.isPlaying = false;
+                soundObj.ctx = null;
+                soundObj.gain = null;
+
+                setTimeout(() => {
+                    if (ctxToClose && ctxToClose.state !== 'closed') {
+                        try {
+                            ctxToClose.close();
+                        } catch(e) {}
+                    }
+                }, 350);
+
+                btn.innerText = type === 'rain' ? '🌧️ 빗소리' : (type === 'purr' ? '🐾 골골송' : (type === 'lofi' ? '☕ 카페소음' : '🔥 불멍'));
+                btn.classList.remove('bg-amber-600', 'text-white');
+                btn.classList.add('bg-wood-300', 'text-wood-800');
+            } else {
+                try {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    const ctx = new AudioCtx();
+                    const gain = ctx.createGain();
+                    gain.connect(ctx.destination);
+
+                    if (type === 'rain' || type === 'fire') {
+                        const bufferSize = ctx.sampleRate * 2;
+                        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                        const output = buffer.getChannelData(0);
+                        for (let i = 0; i < bufferSize; i++) {
+                            output[i] = Math.random() * 2 - 1;
+                        }
+                        const whiteNoise = ctx.createBufferSource();
+                        whiteNoise.buffer = buffer;
+                        whiteNoise.loop = true;
+
+                        const filter = ctx.createBiquadFilter();
+                        filter.type = 'lowpass';
+                        filter.frequency.value = type === 'rain' ? 800 : 450;
+
+                        whiteNoise.connect(filter);
+                        filter.connect(gain);
+                        whiteNoise.start();
+
+                        gain.gain.setValueAtTime(0.01, ctx.currentTime);
+                        gain.gain.linearRampToValueAtTime(soundObj.vol * 0.3, ctx.currentTime + 0.5);
+                    } else if (type === 'purr') {
+                        const osc = ctx.createOscillator();
+                        osc.type = 'sawtooth';
+                        osc.frequency.value = 28;
+
+                        const filter = ctx.createBiquadFilter();
+                        filter.type = 'lowpass';
+                        filter.frequency.value = 120;
+
+                        osc.connect(filter);
+                        filter.connect(gain);
+                        osc.start();
+
+                        gain.gain.setValueAtTime(0.01, ctx.currentTime);
+                        gain.gain.linearRampToValueAtTime(soundObj.vol * 0.3, ctx.currentTime + 0.5);
+                    } else if (type === 'lofi') {
+                        const bufferSize = ctx.sampleRate * 2;
+                        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                        const output = buffer.getChannelData(0);
+                        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+                        for (let i = 0; i < bufferSize; i++) {
+                            const white = Math.random() * 2 - 1;
+                            b0 = 0.99886 * b0 + white * 0.0555179;
+                            b1 = 0.99332 * b1 + white * 0.0750759;
+                            b2 = 0.96900 * b2 + white * 0.1538520;
+                            b3 = 0.86650 * b3 + white * 0.3104856;
+                            b4 = 0.55000 * b4 + white * 0.5329522;
+                            b5 = -0.7616 * b5 - white * 0.0168980;
+                            output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+                            output[i] *= 0.11;
+                            b6 = white * 0.115926;
+                        }
+                        const pink = ctx.createBufferSource();
+                        pink.buffer = buffer;
+                        pink.loop = true;
+                        pink.connect(gain);
+                        pink.start();
+
+                        gain.gain.setValueAtTime(0.01, ctx.currentTime);
+                        gain.gain.linearRampToValueAtTime(soundObj.vol * 0.3, ctx.currentTime + 0.5);
+                    }
+
+                    soundObj.ctx = ctx;
+                    soundObj.gain = gain;
+                    soundObj.isPlaying = true;
+
+                    btn.innerText = 'ON 🔊';
+                    btn.classList.remove('bg-wood-300', 'text-wood-800');
+                    btn.classList.add('bg-amber-600', 'text-white');
+                } catch(e) {
+                    console.error("Audio Context Error:", e);
+                }
+            }
+        }
+
+        /* 5. Cat Collection Gallery Modal */
+        function openCatCollectionModal() {
+            const grid = document.getElementById('cat-collection-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            Object.keys(state.catFriendship).forEach(name => {
+                const data = state.catFriendship[name];
+                const preset = catPresets.find(p => p.name === name) || catPresets[0];
+
+                const card = document.createElement('div');
+                card.className = 'bg-wood-100 border-2 border-wood-300 p-3 rounded-xl flex flex-col items-center shadow-xs';
+                card.innerHTML = `
+                    <div class="text-3xl mb-1">${preset.type === 'siamese' ? '🤎' : (preset.type === 'orange' ? '🧡' : '🤍')}</div>
+                    <div class="font-bold text-xs text-wood-900 font-gowun">${name}</div>
+                    <div class="text-[10px] text-wood-600 text-center my-1">${preset.desc}</div>
+                    <div class="w-full bg-wood-300 h-2 rounded-full overflow-hidden my-1">
+                        <div class="bg-pink-500 h-full" style="width: ${Math.min(100, (data.exp / data.maxExp) * 100)}%"></div>
+                    </div>
+                    <div class="text-[10px] text-pink-700 font-bold">친밀도 Lv.${data.level}</div>
+                `;
+                grid.appendChild(card);
+            });
+
+            document.getElementById('modal-cat-collection').classList.remove('hidden');
+        }
+
+        function closeCatCollectionModal() {
+            document.getElementById('modal-cat-collection').classList.add('hidden');
+        }
+
+        /* 6. Study Stats & Heatmap Modal */
+        function openStatsModal() {
+            const minutes = Math.floor(state.timer.accumulatedSeconds / 60);
+            document.getElementById('stats-total-time').innerText = `${minutes} 분`;
+            document.getElementById('stats-total-sessions').innerText = `${state.timer.completedSessions} 세션`;
+            document.getElementById('stats-churu-count').innerText = `${state.churuCount} 개`;
+
+            const heatmapGrid = document.getElementById('heatmap-grid');
+            if (heatmapGrid) {
+                heatmapGrid.innerHTML = '';
+
+                for (let i = 0; i < 28; i++) {
+                    const cell = document.createElement('div');
+                    const isToday = (i === 27);
+                    const intensity = isToday ? (minutes > 30 ? 'bg-emerald-600' : (minutes > 0 ? 'bg-emerald-400' : 'bg-wood-200')) : (Math.random() > 0.6 ? 'bg-emerald-300' : 'bg-wood-200');
+                    cell.className = `w-full h-6 rounded ${intensity} border border-wood-300 shadow-xs flex items-center justify-center text-[9px] font-bold text-wood-800`;
+                    if (isToday) cell.innerText = '오늘';
+                    heatmapGrid.appendChild(cell);
+                }
+            }
+
+            document.getElementById('modal-study-stats').classList.remove('hidden');
+        }
+
+        function closeStatsModal() {
+            document.getElementById('modal-study-stats').classList.add('hidden');
+        }
+
+        /* 7. To-Do List Management */
+        function addTodo(e) {
+            e.preventDefault();
+            const input = document.getElementById('todo-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            state.todos.push({
+                id: Date.now(),
+                text: text,
+                completed: false
+            });
+
+            input.value = '';
+            renderTodos();
+            showToast('📝', '목표가 등록되었습니다!');
+        }
+
+        function toggleTodo(id) {
+            const todo = state.todos.find(t => t.id === id);
+            if (todo) {
+                todo.completed = !todo.completed;
+                renderTodos();
+                if (todo.completed) showToast('🎉', '목표 하나 완료! 수고하셨습니다!');
+            }
+        }
+
+        function deleteTodo(id) {
+            state.todos = state.todos.filter(t => t.id !== id);
+            renderTodos();
+        }
+
+        function renderTodos() {
+            const list = document.getElementById('todo-list');
+            if (!list) return;
+            list.innerHTML = '';
+
+            let completedCount = 0;
+
+            state.todos.forEach(todo => {
+                if (todo.completed) completedCount++;
+
+                const div = document.createElement('div');
+                div.className = `p-2.5 rounded-xl border transition flex items-center justify-between text-xs ${todo.completed ? 'bg-wood-200/50 border-wood-300 opacity-60' : 'bg-white border-wood-300 shadow-xs'}`;
+                div.innerHTML = `
+                    <div onclick="toggleTodo(${todo.id})" class="flex items-center gap-2.5 cursor-pointer flex-1">
+                        <i class="${todo.completed ? 'fa-solid fa-square-check text-amber-700 text-sm' : 'fa-regular fa-square text-wood-400 text-sm'}"></i>
+                        <span class="${todo.completed ? 'line-through text-wood-600' : 'font-medium text-wood-900'}">${escapeHtml(todo.text)}</span>
+                    </div>
+                    <button onclick="deleteTodo(${todo.id})" class="text-wood-400 hover:text-red-600 px-1.5 py-0.5">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
+                    </button>
+                `;
+                list.appendChild(div);
+            });
+
+            const countEl = document.getElementById('todo-count');
+            if (countEl) countEl.innerText = `${completedCount}/${state.todos.length} 완료`;
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        function interactCat(e, catName, msg) {
+            e.stopPropagation();
+            playCatMeowAudio();
+            showToast('🐱', `[${catName}] ${msg}`);
+            addCatFriendshipExp(catName, 10);
+        }
+
+        /* 8. TA Peter Chatbot Desk */
+        function openPeterDesk() {
+            document.getElementById('modal-peter-desk').classList.remove('hidden');
+        }
+
+        function closePeterDesk() {
+            document.getElementById('modal-peter-desk').classList.add('hidden');
+        }
+
+        function handlePeterChat(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            const chatMessages = document.getElementById('chat-messages');
+
+            // Add user message
+            const userDiv = document.createElement('div');
+            userDiv.className = 'flex items-start justify-end gap-2.5';
+            userDiv.innerHTML = `
+                <div class="bg-amber-600 text-white p-3 rounded-2xl rounded-tr-none max-w-[80%]">
+                    ${escapeHtml(msg)}
+                </div>
+                <div class="text-lg">${state.user.avatar || '👩‍🎓'}</div>
+            `;
+            chatMessages.appendChild(userDiv);
+
+            input.value = '';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // TA Peter Response Simulation
+            setTimeout(() => {
+                let reply = "열심히 공부하고 계시는군요! 뽀모도로 타이머를 켜두고 25분간 몰입한 후 3D 고양이에게 츄르를 챙겨줘 보세요 🐾";
+                if (msg.includes('안녕') || msg.includes('반가')) {
+                    reply = `반갑습니다, ${state.user.name || '학생'}님! 서울대 컴퓨터공학부 연구실 조교 피터입니다. 카페 부스 분위기는 마음에 드시나요?`;
+                } else if (msg.includes('슬럼프') || msg.includes('지루') || msg.includes('공부')) {
+                    reply = "공부가 지루할 땐 5분간 쉬면서 백색소음 빗소리를 틀거나, 고양이들을 클릭해 골골송을 들어보세요. 머리가 한결 가벼워질 거예요!";
+                } else if (msg.includes('고양이') || msg.includes('츄르')) {
+                    reply = "타이머가 완료되면 라떼, 치즈, 백설이 중 한 마리가 마중 나와요! 츄르 스틱을 잡아 입 근처로 대면 오물오물 맛있게 먹습니다 😋";
+                }
+
+                const peterDiv = document.createElement('div');
+                peterDiv.className = 'flex items-start gap-2.5';
+                peterDiv.innerHTML = `
+                    <div class="text-lg">👨‍🏫</div>
+                    <div class="bg-wood-200 text-wood-900 p-3 rounded-2xl rounded-tl-none max-w-[80%] border border-wood-300">
+                        ${reply}
+                    </div>
+                `;
+                chatMessages.appendChild(peterDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 600);
+        }
+
+        /* Helper Functions */
+        function switchTab(tab) {
+            const btnTimer = document.getElementById('tab-btn-timer');
+            const btnTodo = document.getElementById('tab-btn-todo');
+            const contentTimer = document.getElementById('tab-content-timer');
+            const contentTodo = document.getElementById('tab-content-todo');
+
+            if (tab === 'timer') {
+                btnTimer.className = 'flex-1 py-3 font-bold text-xs border-b-2 border-wood-700 text-wood-800 flex items-center justify-center gap-1.5 bg-wood-100';
+                btnTodo.className = 'flex-1 py-3 font-bold text-xs border-b-2 border-transparent text-wood-600 hover:text-wood-800 flex items-center justify-center gap-1.5';
+                contentTimer.classList.remove('hidden');
+                contentTodo.classList.add('hidden');
+            } else {
+                btnTodo.className = 'flex-1 py-3 font-bold text-xs border-b-2 border-wood-700 text-wood-800 flex items-center justify-center gap-1.5 bg-wood-100';
+                btnTimer.className = 'flex-1 py-3 font-bold text-xs border-b-2 border-transparent text-wood-600 hover:text-wood-800 flex items-center justify-center gap-1.5';
+                contentTodo.classList.remove('hidden');
+                contentTimer.classList.add('hidden');
+            }
+        }
+
+        function showToast(icon, text) {
+            const toast = document.getElementById('toast-msg');
+            document.getElementById('toast-icon').innerText = icon;
+            document.getElementById('toast-text').innerText = text;
+
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
